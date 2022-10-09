@@ -8,6 +8,8 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../common/includes")
+
 file(GLOB_RECURSE TARGET_SOURCES "*.c" "*.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${TARGET_SOURCES})

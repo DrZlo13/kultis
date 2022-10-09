@@ -2,23 +2,28 @@ cmake_minimum_required(VERSION 3.1.0)
 
 set(TARGET "bigbro" CACHE STRING "Framework target option")
 set(TARGET_PATH "target/${TARGET}")
-
-if(NOT "$CACHE{TARGET_CACHE}" STREQUAL "${TARGET}")
-    message(STATUS "Target changed, cleaning up")
-    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}")
-endif()
-
-set(TARGET_CACHE ${TARGET} CACHE STRING "Framework target option cache")
-
 include("${TARGET_PATH}/toolchain.cmake")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+
 project("kultis" LANGUAGES C CXX ASM)
+
+set(CMAKE_C_STANDARD 11)
+set(CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory("${TARGET_PATH}")
 
 include_directories("${CMAKE_SOURCE_DIR}/app")
+include_directories("${CMAKE_SOURCE_DIR}/target/common/includes")
 
-file(GLOB_RECURSE CORE_SOURCES "app/*.c" "app/*.cpp")
+file(GLOB_RECURSE CORE_SOURCES
+    "app/*.c"
+    "app/*.cpp"
+    "target/common/source/*.c"
+    "target/common/source/*.cpp"
+)
 
 add_executable("${PROJECT_NAME}_${TARGET}" ${CORE_SOURCES})
 

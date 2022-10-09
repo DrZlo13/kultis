@@ -1,17 +1,24 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "shell",
-			"label": "Build BigBro",
-			"command": "cmake -DTARGET:STRING=bigbro -S. -B build/bigbro && cd build/bigbro && make",
-			"group": "build"
-		},
-		{
-			"type": "shell",
-			"label": "Build Flipper",
-			"command": "cmake -DTARGET:STRING=flipper -S. -B build/flipper && cd build/flipper && make",
-			"group": "build"
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Build BigBro",
+            "command": "cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET:STRING=bigbro -S. -B build/bigbro && cd build/bigbro && make",
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Build and Run BigBro",
+            "dependsOn": "Build BigBro",
+            "command": "cd build/bigbro && ./kultis_bigbro",
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Build Flipper",
+            "command": "cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET:STRING=flipper -S. -B build/flipper && cd build/flipper && make",
+            "group": "build"
+        },
+    ]
 }
