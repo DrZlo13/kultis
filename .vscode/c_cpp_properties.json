@@ -7,13 +7,14 @@
             ],
             "defines": [],
             "macFrameworkPath": [],
-            "compilerPath": "/opt/homebrew/bin/arm-none-eabi-gcc",
+            // "compilerPath": "/opt/homebrew/bin/arm-none-eabi-gcc",
+            "compilerPath": "/usr/bin/gcc",
             "intelliSenseMode": "gcc-arm",
             "compileCommands": "${workspaceFolder}/build/bigbro/compile_commands.json",
-            "configurationProvider": "ms-vscode.makefile-tools",
+            "configurationProvider": "ms-vscode.cmake-tools",
             "cStandard": "c11",
-            "cppStandard": "c++2x",
+            "cppStandard": "c++23"
         }
     ],
-    "version": 4
+    "version": 4 
 }

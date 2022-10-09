@@ -9,6 +9,8 @@
 static constexpr size_t DISPLAY_WIDTH = 128;
 static constexpr size_t DISPLAY_HEIGHT = 64;
 static constexpr size_t DISPLAY_SCALE = 4;
+static constexpr size_t DISPLAY_WIDTH_SCALED = DISPLAY_WIDTH * DISPLAY_SCALE;
+static constexpr size_t DISPLAY_HEIGHT_SCALED = DISPLAY_HEIGHT * DISPLAY_SCALE;
 
 DisplayBuffer display_buffer_hanlder;
 static std::bitset<DISPLAY_WIDTH * DISPLAY_HEIGHT> display_buffer;
@@ -34,7 +36,8 @@ HALEmulator* hal_emulator;
 class DisplayWidget : public QWidget {
 private:
     QImage _image;
-    uchar _buffer[DISPLAY_HEIGHT][DISPLAY_WIDTH][3];
+    static const size_t buffer_colors = 3;
+    uchar _buffer[DISPLAY_HEIGHT][DISPLAY_WIDTH][buffer_colors];
 
     void copy_buffer_to_image() {
         const std::lock_guard<std::mutex> lock(display_buffer_mutex);
@@ -52,7 +55,7 @@ private:
 
 public:
     explicit DisplayWidget(QWidget* parent = 0) {
-        memset(_buffer, 0, DISPLAY_HEIGHT * DISPLAY_WIDTH * 3);
+        memset(_buffer, 0, DISPLAY_HEIGHT * DISPLAY_WIDTH * buffer_colors);
         _image = QImage((uchar*)_buffer, DISPLAY_WIDTH, DISPLAY_HEIGHT, QImage::Format_RGB888);
     }
 
@@ -81,8 +84,8 @@ private:
 public:
     HALEmulator(QWidget* parent = 0) {
         _display = new DisplayWidget(this);
-        _display->resize(DISPLAY_WIDTH * DISPLAY_SCALE, DISPLAY_HEIGHT * DISPLAY_SCALE);
-        _display->setFixedSize(DISPLAY_WIDTH * DISPLAY_SCALE, DISPLAY_HEIGHT * DISPLAY_SCALE);
+        _display->resize(DISPLAY_WIDTH_SCALED, DISPLAY_HEIGHT_SCALED);
+        _display->setFixedSize(DISPLAY_WIDTH_SCALED, DISPLAY_HEIGHT_SCALED);
 
         mainLayout = new QHBoxLayout;
         mainLayout->addWidget(_display);
