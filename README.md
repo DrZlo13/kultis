@@ -1,1 +1,1 @@
-# High-Level hal for embedded applications
+# High-Level HAL for embedded applications
