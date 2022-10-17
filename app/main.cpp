@@ -5,7 +5,7 @@
 void main_thread(void) {
     HALDisplay* display = hal_display_get();
 
-    for(size_t j = 0; j < 100; j++) {
+    while(true) {
         DisplayBuffer* buffer = display->get_display_buffer();
         buffer->fill(false);
         for(size_t i = 0; i < 100; i++) {
@@ -25,6 +25,5 @@ int main(int argc, char** argv) {
 
     hal_post_init();
 
-    t.join();
     return 0;
 }

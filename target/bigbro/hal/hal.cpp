@@ -12,7 +12,7 @@ static constexpr size_t DISPLAY_SCALE = 4;
 static constexpr size_t DISPLAY_WIDTH_SCALED = DISPLAY_WIDTH * DISPLAY_SCALE;
 static constexpr size_t DISPLAY_HEIGHT_SCALED = DISPLAY_HEIGHT * DISPLAY_SCALE;
 
-DisplayBuffer display_buffer_hanlder;
+DisplayBuffer display_buffer_handler;
 static std::bitset<DISPLAY_WIDTH * DISPLAY_HEIGHT> display_buffer;
 static std::mutex display_buffer_mutex;
 
@@ -78,8 +78,22 @@ protected:
 
 class HALEmulator : public QWidget {
 private:
+    static const size_t buttons_count = 6;
     DisplayWidget* _display;
     QHBoxLayout* mainLayout;
+    QGroupBox* inputs;
+    QPushButton* button[buttons_count];
+
+private slots:
+    void handle_button_pressed() {
+        QPushButton* button = (QPushButton*)sender();
+        printf("Button %s pressed\r\n", button->text().toStdString().c_str());
+    }
+
+    void handle_button_released() {
+        QPushButton* button = (QPushButton*)sender();
+        printf("Button %s released\r\n", button->text().toStdString().c_str());
+    }
 
 public:
     HALEmulator(QWidget* parent = 0) {
@@ -87,8 +101,33 @@ public:
         _display->resize(DISPLAY_WIDTH_SCALED, DISPLAY_HEIGHT_SCALED);
         _display->setFixedSize(DISPLAY_WIDTH_SCALED, DISPLAY_HEIGHT_SCALED);
 
+        inputs = new QGroupBox();
+        QGridLayout* layout = new QGridLayout;
+        button[0] = new QPushButton(tr("U"));
+        layout->addWidget(button[0], 0, 1);
+        button[1] = new QPushButton(tr("D"));
+        layout->addWidget(button[1], 2, 1);
+        button[2] = new QPushButton(tr("L"));
+        layout->addWidget(button[2], 1, 0);
+        button[3] = new QPushButton(tr("R"));
+        layout->addWidget(button[3], 1, 2);
+        button[4] = new QPushButton(tr("O"));
+        layout->addWidget(button[4], 1, 1);
+        button[5] = new QPushButton(tr("<"));
+        layout->addWidget(button[5], 2, 2);
+
+        for(size_t i = 0; i < buttons_count; i++) {
+            button[i]->setMaximumHeight(50);
+            button[i]->setMaximumWidth(50);
+            connect(button[i], &QPushButton::pressed, this, &HALEmulator::handle_button_pressed);
+            connect(button[i], &QPushButton::released, this, &HALEmulator::handle_button_released);
+        }
+
+        inputs->setLayout(layout);
+
         mainLayout = new QHBoxLayout;
         mainLayout->addWidget(_display);
+        mainLayout->addWidget(inputs);
         setLayout(mainLayout);
 
         setWindowTitle(QApplication::translate("halemulator", "HAL Emulator"));
@@ -118,7 +157,7 @@ size_t HALDisplay::get_height() {
 
 DisplayBuffer* HALDisplay::get_display_buffer() {
     display_buffer_mutex.lock();
-    return &display_buffer_hanlder;
+    return &display_buffer_handler;
 }
 
 void HALDisplay::commit_display_buffer(bool redraw) {
