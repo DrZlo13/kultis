@@ -4,13 +4,15 @@
 
 void main_thread(void) {
     HALDisplay* display = hal_display_get();
+    size_t width = display->get_width();
+    size_t height = display->get_height();
 
     while(true) {
         DisplayBuffer* buffer = display->get_display_buffer();
         buffer->fill(false);
-        for(size_t i = 0; i < 100; i++) {
+        for(size_t i = 0; i < 1000; i++) {
             // set random pixel
-            buffer->set_pixel(rand() % 128, rand() % 64, true);
+            buffer->set_pixel(rand() % width, rand() % height, true);
         }
         display->commit_display_buffer(true);
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
