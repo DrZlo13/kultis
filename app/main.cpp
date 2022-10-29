@@ -1,8 +1,8 @@
 #include <hal/hal.h>
-#include <thread>
+#include <core/core.h>
 #include <stdlib.h>
 
-void main_thread(void) {
+int32_t main_thread(void* context) {
     HALDisplay* display = hal_display_get();
     size_t width = display->get_width();
     size_t height = display->get_height();
@@ -15,7 +15,7 @@ void main_thread(void) {
             buffer->set_pixel(rand() % width, rand() % height, true);
         }
         display->commit_display_buffer(true);
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        Kultis::delay_ms(20);
     }
 }
 
@@ -23,9 +23,12 @@ int main(int argc, char** argv) {
     hal_pre_init();
     hal_init();
 
-    std::thread t(main_thread);
+    Kultis::KThread* thread = new Kultis::KThread();
+    thread->set_callback(main_thread, nullptr);
+    thread->start();
 
     hal_post_init();
 
+    // thread->join();
     return 0;
 }
