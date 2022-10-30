@@ -6,6 +6,11 @@
 #include <QtWidgets>
 #include <QImage>
 
+typedef struct {
+    InputCallback callback;
+    void* context;
+} InputCallbackRecord;
+
 static constexpr size_t DISPLAY_WIDTH = 128;
 static constexpr size_t DISPLAY_HEIGHT = 64;
 static constexpr size_t DISPLAY_SCALE = 4;
@@ -16,8 +21,32 @@ DisplayBuffer display_buffer_handler;
 static std::bitset<DISPLAY_WIDTH * DISPLAY_HEIGHT> display_buffer;
 static std::mutex display_buffer_mutex;
 
+static std::mutex input_callback_mutex;
+static std::vector<InputCallbackRecord> input_callbacks;
+
+static const char* button_names[] = {
+    [static_cast<uint8_t>(InputKey::Up)] = "U",
+    [static_cast<uint8_t>(InputKey::Down)] = "D",
+    [static_cast<uint8_t>(InputKey::Right)] = "L",
+    [static_cast<uint8_t>(InputKey::Left)] = "R",
+    [static_cast<uint8_t>(InputKey::Ok)] = "O",
+    [static_cast<uint8_t>(InputKey::Back)] = "<",
+};
+
+bool get_key_from_button_name(const char* name, InputKey* key) {
+    for(size_t i = 0; i < sizeof(button_names) / sizeof(button_names[0]); i++) {
+        if(strcmp(button_names[i], name) == 0) {
+            *key = static_cast<InputKey>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
 void DisplayBuffer::set_pixel(size_t x, size_t y, bool pixel) {
-    display_buffer[(y * DISPLAY_WIDTH) + (x)] = pixel;
+    if(x < DISPLAY_WIDTH && y < DISPLAY_HEIGHT) {
+        display_buffer[(y * DISPLAY_WIDTH) + (x)] = pixel;
+    }
 }
 
 void DisplayBuffer::fill(bool value) {
@@ -84,15 +113,28 @@ private:
     QGroupBox* inputs;
     QPushButton* button[buttons_count];
 
+    void send_input_event(QPushButton* button, InputType type) {
+        std::string name = button->text().toStdString();
+
+        InputEvent event;
+        event.type = type;
+
+        if(get_key_from_button_name(name.c_str(), &event.key)) {
+            const std::lock_guard<std::mutex> lock(input_callback_mutex);
+            for(auto& callback : input_callbacks) {
+                callback.callback(&event, callback.context);
+            }
+        }
+    }
 private slots:
     void handle_button_pressed() {
         QPushButton* button = (QPushButton*)sender();
-        printf("Button %s pressed\r\n", button->text().toStdString().c_str());
+        send_input_event(button, InputType::Press);
     }
 
     void handle_button_released() {
         QPushButton* button = (QPushButton*)sender();
-        printf("Button %s released\r\n", button->text().toStdString().c_str());
+        send_input_event(button, InputType::Release);
     }
 
 public:
@@ -103,17 +145,17 @@ public:
 
         inputs = new QGroupBox();
         QGridLayout* layout = new QGridLayout;
-        button[0] = new QPushButton(tr("U"));
+        button[0] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Up)]));
         layout->addWidget(button[0], 0, 1);
-        button[1] = new QPushButton(tr("D"));
+        button[1] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Down)]));
         layout->addWidget(button[1], 2, 1);
-        button[2] = new QPushButton(tr("L"));
+        button[2] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Left)]));
         layout->addWidget(button[2], 1, 0);
-        button[3] = new QPushButton(tr("R"));
+        button[3] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Right)]));
         layout->addWidget(button[3], 1, 2);
-        button[4] = new QPushButton(tr("O"));
+        button[4] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Ok)]));
         layout->addWidget(button[4], 1, 1);
-        button[5] = new QPushButton(tr("<"));
+        button[5] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Back)]));
         layout->addWidget(button[5], 2, 2);
 
         for(size_t i = 0; i < buttons_count; i++) {
@@ -165,6 +207,14 @@ void HALDisplay::commit_display_buffer(bool redraw) {
     if(redraw) {
         hal_emulator->force_display_redraw();
     }
+}
+
+void hal_input_init(void) {
+}
+
+void hal_input_set_callback(InputCallback callback, void* context) {
+    const std::lock_guard<std::mutex> lock(input_callback_mutex);
+    input_callbacks.push_back({callback, context});
 }
 
 void hal_pre_init(void) {

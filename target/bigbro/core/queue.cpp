@@ -40,9 +40,20 @@ public:
     }
 
     Status send(void* msg) {
-        std::unique_lock<std::mutex> lock(mutex);
-        push(msg);
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            push(msg);
+        }
         notifier.notify_one();
+        return Status::OK;
+    }
+
+    Status receive(void* msg) {
+        std::unique_lock<std::mutex> lock(mutex);
+        while(queue.empty()) {
+            notifier.wait(lock);
+        }
+        pop(msg);
         return Status::OK;
     }
 
@@ -83,9 +94,19 @@ Queue::~Queue() {
     delete static_cast<QueueInstance*>(this->context);
 }
 
+Status Queue::send(void* msg) {
+    QueueInstance* queue = static_cast<QueueInstance*>(this->context);
+    return queue->send(msg);
+}
+
 Status Queue::send(void* msg, std::chrono::milliseconds timeout) {
     QueueInstance* queue = static_cast<QueueInstance*>(this->context);
     return queue->send(msg);
+}
+
+Status Queue::receive(void* msg) {
+    QueueInstance* queue = static_cast<QueueInstance*>(this->context);
+    return queue->receive(msg);
 }
 
 Status Queue::receive(void* msg, std::chrono::milliseconds timeout) {

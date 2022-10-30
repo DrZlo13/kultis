@@ -2,20 +2,46 @@
 #include <core/core.h>
 #include <stdlib.h>
 
+void main_input_cb(InputEvent* input_event, void* context) {
+    Kultis::Queue* queue = (Kultis::Queue*)context;
+    queue->send(input_event);
+}
+
 int32_t main_thread(void* context) {
     HALDisplay* display = hal_display_get();
     size_t width = display->get_width();
     size_t height = display->get_height();
+    Kultis::Queue queue(10, sizeof(InputEvent));
+    hal_input_set_callback(main_input_cb, &queue);
+
+    uint8_t pixel_x = width / 2;
+    uint8_t pixel_y = height / 2;
 
     while(true) {
+        InputEvent input_event;
+        Kultis::Status status = queue.receive(&input_event, std::chrono::milliseconds(20));
+
+        if(status == Kultis::Status::OK) {
+            if(input_event.type == InputType::Press) {
+                if(input_event.key == InputKey::Up) {
+                    pixel_y -= 1;
+                } else if(input_event.key == InputKey::Down) {
+                    pixel_y += 1;
+                } else if(input_event.key == InputKey::Left) {
+                    pixel_x -= 1;
+                } else if(input_event.key == InputKey::Right) {
+                    pixel_x += 1;
+                }
+            }
+        }
         DisplayBuffer* buffer = display->get_display_buffer();
         buffer->fill(false);
-        for(size_t i = 0; i < 1000; i++) {
-            // set random pixel
-            buffer->set_pixel(rand() % width, rand() % height, true);
-        }
+        buffer->set_pixel(pixel_x, pixel_y, true);
+        buffer->set_pixel(pixel_x + 1, pixel_y, true);
+        buffer->set_pixel(pixel_x, pixel_y + 1, true);
+        buffer->set_pixel(pixel_x + 1, pixel_y + 1, true);
+
         display->commit_display_buffer(true);
-        Kultis::delay(std::chrono::milliseconds(20));
     }
 }
 

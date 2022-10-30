@@ -1,5 +1,6 @@
 #pragma once
 #include "hal_display.h"
+#include "hal_input.h"
 
 void hal_init();
 
