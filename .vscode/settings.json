@@ -73,6 +73,9 @@
         "sstream": "cpp",
         "variant": "cpp",
         "__functional_base": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "iostream": "cpp",
+        "format": "cpp",
+        "__config_site": "cpp"
     }
 }

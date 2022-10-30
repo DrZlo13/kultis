@@ -2,12 +2,16 @@
 #include <core/core.h>
 #include <stdlib.h>
 
+#define TAG "Main"
+
 void main_input_cb(InputEvent* input_event, void* context) {
     Kultis::Queue* queue = (Kultis::Queue*)context;
     queue->send(input_event);
 }
 
 int32_t main_thread(void* context) {
+    hal_log(LogLevel::Info, TAG, "Main thread started");
+
     HALDisplay* display = hal_display_get();
     size_t width = display->get_width();
     size_t height = display->get_height();
@@ -34,13 +38,10 @@ int32_t main_thread(void* context) {
                 }
             }
         }
+
         DisplayBuffer* buffer = display->get_display_buffer();
         buffer->fill(false);
         buffer->set_pixel(pixel_x, pixel_y, true);
-        buffer->set_pixel(pixel_x + 1, pixel_y, true);
-        buffer->set_pixel(pixel_x, pixel_y + 1, true);
-        buffer->set_pixel(pixel_x + 1, pixel_y + 1, true);
-
         display->commit_display_buffer(true);
     }
 }

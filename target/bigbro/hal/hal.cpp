@@ -5,6 +5,7 @@
 
 #include <QtWidgets>
 #include <QImage>
+#include <QPlainTextEdit>
 
 typedef struct {
     InputCallback callback;
@@ -112,6 +113,7 @@ private:
     QHBoxLayout* mainLayout;
     QGroupBox* inputs;
     QPushButton* button[buttons_count];
+    QPlainTextEdit* log;
 
     void send_input_event(QPushButton* button, InputType type) {
         std::string name = button->text().toStdString();
@@ -126,7 +128,17 @@ private:
             }
         }
     }
+
+    QFont get_monospace_font() {
+        QFont font;
+        font.setStyleHint(QFont::Monospace);
+        font.setFamily("Monospace");
+        font.setFixedPitch(true);
+        return font;
+    }
+
 private slots:
+
     void handle_button_pressed() {
         QPushButton* button = (QPushButton*)sender();
         send_input_event(button, InputType::Press);
@@ -167,12 +179,24 @@ public:
 
         inputs->setLayout(layout);
 
+        log = new QPlainTextEdit();
+        log->setFont(get_monospace_font());
+        log->setReadOnly(true);
+
+        QHBoxLayout* screen_layout = new QHBoxLayout;
+        screen_layout->addWidget(_display);
+        screen_layout->addWidget(inputs);
+
+        QVBoxLayout* top_layout = new QVBoxLayout;
+        top_layout->addLayout(screen_layout);
+        top_layout->addWidget(log);
+
         mainLayout = new QHBoxLayout;
-        mainLayout->addWidget(_display);
-        mainLayout->addWidget(inputs);
+        mainLayout->addLayout(top_layout);
         setLayout(mainLayout);
 
         setWindowTitle(QApplication::translate("halemulator", "HAL Emulator"));
+        log_message("HAL Emulator started");
     }
 
     ~HALEmulator() {
@@ -180,6 +204,11 @@ public:
 
     void force_display_redraw() {
         _display->force_redraw();
+    }
+
+    void log_message(const char* message) {
+        QMetaObject::invokeMethod(
+            log, "appendHtml", Qt::QueuedConnection, Q_ARG(QString, QString(message)));
     }
 };
 
@@ -209,6 +238,8 @@ void HALDisplay::commit_display_buffer(bool redraw) {
     }
 }
 
+/***************************** Input *****************************/
+
 void hal_input_init(void) {
 }
 
@@ -216,6 +247,69 @@ void hal_input_set_callback(InputCallback callback, void* context) {
     const std::lock_guard<std::mutex> lock(input_callback_mutex);
     input_callbacks.push_back({callback, context});
 }
+
+/***************************** Log *****************************/
+
+#include <string>
+#include <chrono>
+#include <ctime>
+
+static uint32_t start_time;
+
+void hal_log_init() {
+    start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+}
+
+uint32_t log_get_time() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+               .count() -
+           start_time;
+}
+
+void hal_log_raw(const char* text) {
+    hal_emulator->log_message(text);
+}
+
+static const char* log_colors[] = {
+    [static_cast<uint8_t>(LogLevel::Error)] = "red",
+    [static_cast<uint8_t>(LogLevel::Warning)] = "brown",
+    [static_cast<uint8_t>(LogLevel::Info)] = "green",
+    [static_cast<uint8_t>(LogLevel::Debug)] = "blue",
+    [static_cast<uint8_t>(LogLevel::Trace)] = "purple",
+};
+
+static const char* log_letters[] = {
+    [static_cast<uint8_t>(LogLevel::Error)] = "E",
+    [static_cast<uint8_t>(LogLevel::Warning)] = "W",
+    [static_cast<uint8_t>(LogLevel::Info)] = "I",
+    [static_cast<uint8_t>(LogLevel::Debug)] = "D",
+    [static_cast<uint8_t>(LogLevel::Trace)] = "T",
+};
+
+void hal_log(LogLevel level, const char* tag, const char* format, ...) {
+    const char* color = log_colors[static_cast<uint8_t>(level)];
+    const char* letter = log_letters[static_cast<uint8_t>(level)];
+    std::string time = std::to_string(log_get_time());
+    std::string message =
+        time + " <font color=\"" + std::string(color) + "\">[" + letter + "][" + tag + "]</font> ";
+
+    va_list args;
+    va_start(args, format);
+    char* buffer = nullptr;
+    int size = vasprintf(&buffer, format, args);
+    va_end(args);
+    if(size > 0) {
+        message += buffer;
+        free(buffer);
+    }
+
+    hal_emulator->log_message(message.c_str());
+}
+
+/***************************** HAL *****************************/
 
 void hal_pre_init(void) {
     int argc = 0;
