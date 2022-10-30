@@ -9,6 +9,42 @@ void main_input_cb(InputEvent* input_event, void* context) {
     queue->send(input_event);
 }
 
+const char* input_get_type_name(InputType type) {
+    switch(type) {
+    case InputType::Press:
+        return "Press";
+    case InputType::Release:
+        return "Release";
+    case InputType::Short:
+        return "Short";
+    case InputType::Long:
+        return "Long";
+    case InputType::Repeat:
+        return "Repeat";
+    default:
+        return "Unknown";
+    }
+}
+
+const char* input_get_key_name(InputKey key) {
+    switch(key) {
+    case InputKey::Up:
+        return "Up";
+    case InputKey::Down:
+        return "Down";
+    case InputKey::Right:
+        return "Right";
+    case InputKey::Left:
+        return "Left";
+    case InputKey::Ok:
+        return "Ok";
+    case InputKey::Back:
+        return "Back";
+    default:
+        return "Unknown";
+    }
+}
+
 int32_t main_thread(void* context) {
     hal_log(LogLevel::Info, TAG, "Main thread started");
 
@@ -26,7 +62,7 @@ int32_t main_thread(void* context) {
         Kultis::Status status = queue.receive(&input_event, std::chrono::milliseconds(20));
 
         if(status == Kultis::Status::OK) {
-            if(input_event.type == InputType::Press) {
+            if(input_event.type == InputType::Press || input_event.type == InputType::Repeat) {
                 if(input_event.key == InputKey::Up) {
                     pixel_y -= 1;
                 } else if(input_event.key == InputKey::Down) {
@@ -37,6 +73,13 @@ int32_t main_thread(void* context) {
                     pixel_x += 1;
                 }
             }
+
+            hal_log(
+                LogLevel::Info,
+                TAG,
+                "Input event: %s %s",
+                input_get_type_name(input_event.type),
+                input_get_key_name(input_event.key));
         }
 
         DisplayBuffer* buffer = display->get_display_buffer();

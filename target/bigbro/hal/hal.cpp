@@ -26,12 +26,12 @@ static std::mutex input_callback_mutex;
 static std::vector<InputCallbackRecord> input_callbacks;
 
 static const char* button_names[] = {
-    [static_cast<uint8_t>(InputKey::Up)] = "U",
-    [static_cast<uint8_t>(InputKey::Down)] = "D",
-    [static_cast<uint8_t>(InputKey::Right)] = "L",
-    [static_cast<uint8_t>(InputKey::Left)] = "R",
-    [static_cast<uint8_t>(InputKey::Ok)] = "O",
-    [static_cast<uint8_t>(InputKey::Back)] = "<",
+    [static_cast<uint8_t>(InputKey::Up)] = "↑",
+    [static_cast<uint8_t>(InputKey::Down)] = "↓",
+    [static_cast<uint8_t>(InputKey::Right)] = "→",
+    [static_cast<uint8_t>(InputKey::Left)] = "←",
+    [static_cast<uint8_t>(InputKey::Ok)] = "○",
+    [static_cast<uint8_t>(InputKey::Back)] = "⇤",
 };
 
 bool get_key_from_button_name(const char* name, InputKey* key) {
@@ -125,6 +125,66 @@ protected:
     }
 };
 
+#define INPUT_PRESS_TICKS 150
+#define INPUT_LONG_PRESS_COUNTS 2
+
+class ButtonTimer : public QWidget {
+private:
+    InputKey _key;
+    QTimer* _timer;
+    uint32_t _counter;
+
+    void send_input_event(InputType type, InputKey key) {
+        InputEvent event;
+        event.type = type;
+        event.key = key;
+
+        const std::lock_guard<std::mutex> lock(input_callback_mutex);
+        for(auto& callback : input_callbacks) {
+            callback.callback(&event, callback.context);
+        }
+    }
+
+public:
+    ButtonTimer(InputKey key) {
+        _key = key;
+        _timer = new QTimer();
+        _timer->setSingleShot(true);
+        connect(_timer, &QTimer::timeout, this, &ButtonTimer::timeout);
+    }
+
+    ~ButtonTimer() {
+        delete _timer;
+    }
+
+    void start() {
+        _counter = 0;
+        _timer->start(std::chrono::milliseconds(INPUT_PRESS_TICKS));
+    }
+
+    void continue_timer() {
+        _timer->start(std::chrono::milliseconds(INPUT_PRESS_TICKS));
+    }
+
+    void stop() {
+        _timer->stop();
+    }
+
+    uint32_t get_counter() {
+        return _counter;
+    }
+
+    void timeout() {
+        _counter++;
+        if(_counter == INPUT_LONG_PRESS_COUNTS) {
+            send_input_event(InputType::Long, _key);
+        } else if(_counter > INPUT_LONG_PRESS_COUNTS) {
+            send_input_event(InputType::Repeat, _key);
+        }
+        continue_timer();
+    }
+};
+
 class HALEmulator : public QWidget {
 private:
     static const size_t buttons_count = 6;
@@ -132,7 +192,19 @@ private:
     QHBoxLayout* mainLayout;
     QGroupBox* inputs;
     QPushButton* button[buttons_count];
+    ButtonTimer* button_timer[buttons_count];
     QPlainTextEdit* log;
+
+    void send_input_raw_event(InputType type, InputKey key) {
+        InputEvent event;
+        event.type = type;
+        event.key = key;
+
+        const std::lock_guard<std::mutex> lock(input_callback_mutex);
+        for(auto& callback : input_callbacks) {
+            callback.callback(&event, callback.context);
+        }
+    }
 
     void send_input_event(QPushButton* button, InputType type) {
         std::string name = button->text().toStdString();
@@ -141,10 +213,17 @@ private:
         event.type = type;
 
         if(get_key_from_button_name(name.c_str(), &event.key)) {
-            const std::lock_guard<std::mutex> lock(input_callback_mutex);
-            for(auto& callback : input_callbacks) {
-                callback.callback(&event, callback.context);
+            ButtonTimer* timer = button_timer[static_cast<uint8_t>(event.key)];
+            if(type == InputType::Press) {
+                timer->start();
+            } else if(type == InputType::Release) {
+                timer->stop();
+                if(timer->get_counter() < INPUT_LONG_PRESS_COUNTS) {
+                    send_input_raw_event(InputType::Short, event.key);
+                }
             }
+
+            send_input_raw_event(type, event.key);
         }
     }
 
@@ -156,6 +235,12 @@ private:
         return font;
     }
 
+    QPushButton* allocate_button(InputKey key) {
+        QPushButton* btn = new QPushButton(tr(button_names[static_cast<uint8_t>(key)]));
+        button[static_cast<uint8_t>(key)] = btn;
+        button_timer[static_cast<uint8_t>(key)] = new ButtonTimer(key);
+        return btn;
+    }
 private slots:
 
     void handle_button_pressed() {
@@ -176,18 +261,12 @@ public:
 
         inputs = new QGroupBox();
         QGridLayout* layout = new QGridLayout;
-        button[0] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Up)]));
-        layout->addWidget(button[0], 0, 1);
-        button[1] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Down)]));
-        layout->addWidget(button[1], 2, 1);
-        button[2] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Left)]));
-        layout->addWidget(button[2], 1, 0);
-        button[3] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Right)]));
-        layout->addWidget(button[3], 1, 2);
-        button[4] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Ok)]));
-        layout->addWidget(button[4], 1, 1);
-        button[5] = new QPushButton(tr(button_names[static_cast<uint8_t>(InputKey::Back)]));
-        layout->addWidget(button[5], 2, 2);
+        layout->addWidget(allocate_button(InputKey::Up), 0, 1);
+        layout->addWidget(allocate_button(InputKey::Down), 2, 1);
+        layout->addWidget(allocate_button(InputKey::Left), 1, 0);
+        layout->addWidget(allocate_button(InputKey::Right), 1, 2);
+        layout->addWidget(allocate_button(InputKey::Ok), 1, 1);
+        layout->addWidget(allocate_button(InputKey::Back), 2, 2);
 
         for(size_t i = 0; i < buttons_count; i++) {
             button[i]->setMaximumHeight(50);
