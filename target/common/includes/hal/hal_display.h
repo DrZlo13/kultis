@@ -10,8 +10,6 @@ public:
 };
 
 class HALDisplay {
-private:
-    /* data */
 public:
     HALDisplay();
     ~HALDisplay();

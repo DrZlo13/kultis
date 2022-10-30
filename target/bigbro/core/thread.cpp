@@ -13,31 +13,31 @@ struct ThreadContext {
     std::thread thread;
 };
 
-KThread::KThread() {
+Thread::Thread() {
     this->context = static_cast<void*>(new ThreadContext());
 }
 
-KThread::~KThread() {
+Thread::~Thread() {
     delete get_context();
 }
 
-void KThread::set_name(const char* name) {
+void Thread::set_name(const char* name) {
     get_context()->name = name;
 }
 
-void KThread::set_stack_size(size_t stack_size) {
+void Thread::set_stack_size(size_t stack_size) {
     get_context()->stack_size = stack_size;
 }
 
-void KThread::set_callback(ThreadCallback callback, void* arg) {
+void Thread::set_callback(ThreadCallback callback, void* arg) {
     get_context()->callback = callback;
     get_context()->arg = arg;
 }
 
-void KThread::start() {
+void Thread::start() {
     get_context()->thread = std::thread(get_context()->callback, get_context()->arg);
 }
 
-void KThread::join() {
+void Thread::join() {
     get_context()->thread.join();
 }

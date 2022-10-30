@@ -15,7 +15,7 @@ int32_t main_thread(void* context) {
             buffer->set_pixel(rand() % width, rand() % height, true);
         }
         display->commit_display_buffer(true);
-        Kultis::delay_ms(20);
+        Kultis::delay(std::chrono::milliseconds(20));
     }
 }
 
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     hal_pre_init();
     hal_init();
 
-    Kultis::KThread* thread = new Kultis::KThread();
+    Kultis::Thread* thread = new Kultis::Thread();
     thread->set_callback(main_thread, nullptr);
     thread->start();
 
