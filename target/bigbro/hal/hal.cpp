@@ -63,11 +63,32 @@ class HALEmulator;
 QApplication* main_app;
 HALEmulator* hal_emulator;
 
+typedef struct Color {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} Color;
+
+static Color color_set = {0x00, 0x00, 0x00};
+static Color color_reset = {0xFF, 0x82, 0x00};
+
 class DisplayWidget : public QWidget {
 private:
     QImage _image;
     static const size_t buffer_colors = 3;
     uchar _buffer[DISPLAY_HEIGHT][DISPLAY_WIDTH][buffer_colors];
+
+    void set_pixel(size_t x, size_t y, bool pixel) {
+        if(pixel) {
+            _buffer[y][x][0] = color_set.r;
+            _buffer[y][x][1] = color_set.g;
+            _buffer[y][x][2] = color_set.b;
+        } else {
+            _buffer[y][x][0] = color_reset.r;
+            _buffer[y][x][1] = color_reset.g;
+            _buffer[y][x][2] = color_reset.b;
+        }
+    }
 
     void copy_buffer_to_image() {
         const std::lock_guard<std::mutex> lock(display_buffer_mutex);
@@ -76,9 +97,7 @@ private:
         for(size_t y = 0; y < DISPLAY_HEIGHT; y++) {
             for(size_t x = 0; x < DISPLAY_WIDTH; x++) {
                 bool bit = display_buffer[(y * DISPLAY_WIDTH) + (x)];
-                _buffer[y][x][0] = bit * 255;
-                _buffer[y][x][1] = bit * 255;
-                _buffer[y][x][2] = bit * 255;
+                set_pixel(x, y, bit);
             }
         }
     }
