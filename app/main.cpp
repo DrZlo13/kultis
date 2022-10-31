@@ -1,48 +1,13 @@
 #include <hal/hal.h>
 #include <core/core.h>
 #include <stdlib.h>
+#include <render/render.h>
 
 #define TAG "Main"
 
 void main_input_cb(InputEvent* input_event, void* context) {
     Kultis::Queue* queue = (Kultis::Queue*)context;
     queue->send(input_event);
-}
-
-const char* input_get_type_name(InputType type) {
-    switch(type) {
-    case InputType::Press:
-        return "Press";
-    case InputType::Release:
-        return "Release";
-    case InputType::Short:
-        return "Short";
-    case InputType::Long:
-        return "Long";
-    case InputType::Repeat:
-        return "Repeat";
-    default:
-        return "Unknown";
-    }
-}
-
-const char* input_get_key_name(InputKey key) {
-    switch(key) {
-    case InputKey::Up:
-        return "Up";
-    case InputKey::Down:
-        return "Down";
-    case InputKey::Right:
-        return "Right";
-    case InputKey::Left:
-        return "Left";
-    case InputKey::Ok:
-        return "Ok";
-    case InputKey::Back:
-        return "Back";
-    default:
-        return "Unknown";
-    }
 }
 
 int32_t main_thread(void* context) {
@@ -73,13 +38,6 @@ int32_t main_thread(void* context) {
                     pixel_x += 1;
                 }
             }
-
-            hal_log(
-                LogLevel::Info,
-                TAG,
-                "Input event: %s %s",
-                input_get_type_name(input_event.type),
-                input_get_key_name(input_event.key));
         }
 
         DisplayBuffer* buffer = display->get_display_buffer();
