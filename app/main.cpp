@@ -1,7 +1,8 @@
 #include <hal/hal.h>
 #include <core/core.h>
 #include <stdlib.h>
-#include <render/render.h>
+#include "render/render.h"
+#include "render/font/fonts.h"
 
 #define TAG "Main"
 
@@ -40,9 +41,16 @@ int32_t main_thread(void* context) {
             }
         }
 
-        DisplayBuffer* buffer = display->get_display_buffer();
-        buffer->fill(false);
-        buffer->set_pixel(pixel_x, pixel_y, true);
+        // DisplayBuffer* buffer = display->get_display_buffer();
+        // buffer->fill(false);
+        // buffer->set_pixel(pixel_x, pixel_y, true);
+        // display->commit_display_buffer(true);
+
+        Canvas canvas(display->get_display_buffer(), width, height);
+
+        canvas.fill(false);
+        canvas.text_set_font(u8g2_font_helvB08_tr);
+        canvas.text(pixel_x, pixel_y, "Hello World!");
         display->commit_display_buffer(true);
     }
 }
