@@ -1,5 +1,22 @@
 #include "render.h"
 
+WidgetGuard::WidgetGuard(Widget* widget)
+    : widget(widget) {
+    widget->lock();
+}
+
+WidgetGuard::~WidgetGuard() {
+    widget->unlock();
+}
+
+void WidgetLockable::lock() {
+    mutex.lock();
+}
+
+void WidgetLockable::unlock() {
+    mutex.unlock();
+}
+
 Gui::Gui()
     : display(hal_display_get())
     , width(display->get_width())
@@ -13,16 +30,16 @@ Gui::~Gui() {
 }
 
 void Gui::render() {
-    Kultis::MutexGuard lock(mutex);
     Canvas canvas(display->get_display_buffer(), width, height);
+    canvas.fill(false);
 
     for(Widget* widget : widgets) {
         if(widget->is_enabled()) {
-            int16_t x, y, w, h;
-            std::tie(x, y) = widget->get_position();
+            int16_t w, h;
             std::tie(w, h) = widget->get_size();
-            if(x + w > 0 && x < width && y + h > 0 && y < height) {
-                widget->render(&canvas);
+            if(w > 0 && h > 0) {
+                WidgetGuard guard(widget);
+                widget->render(&canvas, 0, 0);
             }
         }
     }
@@ -38,6 +55,15 @@ void Gui::input(InputEvent* input_event) {
     }
 }
 
-void Gui::add_widget(Widget* widget) {
+Widget* Gui::add_widget(Widget* widget) {
     widgets.push_back(widget);
+    return widget;
+}
+
+uint16_t Gui::get_width() {
+    return width;
+}
+
+uint16_t Gui::get_height() {
+    return height;
 }

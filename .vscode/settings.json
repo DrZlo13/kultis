@@ -76,7 +76,8 @@
         "queue": "cpp",
         "iostream": "cpp",
         "format": "cpp",
-        "__config_site": "cpp"
+        "__config_site": "cpp",
+        "__availability": "cpp"
     },
     "workbench.tree.indent": 16
 }

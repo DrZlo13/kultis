@@ -25,11 +25,42 @@ public:
 class Widget {
 public:
     virtual ~Widget() = default;
-    virtual void render(Canvas* canvas) = 0;
-    virtual bool input(InputEvent* input_event) = 0;
-    virtual std::pair<uint16_t, uint16_t> get_size() = 0;
-    virtual std::pair<int16_t, int16_t> get_position() = 0;
-    virtual bool is_enabled() = 0;
+
+    virtual void lock(){};
+
+    virtual void unlock(){};
+
+    virtual void render(Canvas* canvas, int16_t x, int16_t y){};
+
+    virtual bool input(InputEvent* input_event) {
+        return false;
+    }
+
+    virtual std::pair<uint16_t, uint16_t> get_size() {
+        return std::make_pair(UINT16_MAX, UINT16_MAX);
+    }
+
+    virtual bool is_enabled() {
+        return true;
+    }
+};
+
+class WidgetGuard {
+private:
+    Widget* widget;
+
+public:
+    WidgetGuard(Widget* widget);
+    ~WidgetGuard();
+};
+
+class WidgetLockable : public Widget {
+private:
+    Kultis::Mutex mutex;
+
+public:
+    void lock() override;
+    void unlock() override;
 };
 
 class Gui {
@@ -38,12 +69,13 @@ private:
     HALDisplay* display;
     const uint16_t width;
     const uint16_t height;
-    Kultis::Mutex mutex;
 
 public:
     Gui();
     ~Gui();
     void render();
     void input(InputEvent* input_event);
-    void add_widget(Widget* widget);
+    Widget* add_widget(Widget* widget);
+    uint16_t get_width();
+    uint16_t get_height();
 };
